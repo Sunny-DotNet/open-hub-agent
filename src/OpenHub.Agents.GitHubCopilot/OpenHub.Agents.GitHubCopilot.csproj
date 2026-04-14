@@ -3,6 +3,8 @@
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <AssemblyName>OpenHub.Agents.GitHubCopilot</AssemblyName>
     <Description>GitHub Copilot adapters for OpenHub.Agents with shared-session and per-task session modes.</Description>
+    <!-- This package intentionally wraps the current preview Copilot integration package. -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
