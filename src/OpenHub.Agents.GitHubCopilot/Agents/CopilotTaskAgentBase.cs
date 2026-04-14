@@ -26,7 +26,7 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
         _taskSubscribers[taskId] = subscriber;
         Publisher.PublishTaskStatusChanged(new TaskStatusChangedEvent(taskId, TaskStatus.Pending, DateTime.UtcNow));
 
-        Task execution = Task.Run(() => ExecuteTaskAsync(taskId, subscriber, request.Message, _disposeCancellationSource.Token));
+        Task execution = ScheduleTaskExecutionAsync(taskId, subscriber, request.Message, _disposeCancellationSource.Token);
         _taskExecutions[taskId] = execution;
         _ = execution.ContinueWith(
             _ => CleanupTask(taskId),
@@ -37,7 +37,14 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
         return Task.FromResult(new CreateTaskResponse(taskId, subscriber));
     }
 
-    private async Task ExecuteTaskAsync(
+    protected virtual Task ScheduleTaskExecutionAsync(
+        Guid taskId,
+        CopilotTaskSubscriber subscriber,
+        string message,
+        CancellationToken cancellationToken)
+        => Task.Run(() => ExecuteTaskAsync(taskId, subscriber, message, cancellationToken));
+
+    protected async Task ExecuteTaskAsync(
         Guid taskId,
         CopilotTaskSubscriber subscriber,
         string message,

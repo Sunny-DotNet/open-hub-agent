@@ -1,35 +1,64 @@
+using OpenHub.Agents.Models;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
+using TaskStatus = OpenHub.Agents.Models.TaskStatus;
 
 namespace OpenHub.Agents;
 
 internal sealed class SharedCopilotSessionTaskAgent(ICopilotSessionConnection session, bool ownsSession) : CopilotTaskAgentBase
 {
-    private readonly SemaphoreSlim _executionGate = new(1, 1);
+    private readonly object _executionSyncRoot = new();
+    private Task _executionQueueTail = Task.CompletedTask;
 
-    protected override async Task ExecuteCoreAsync(
+    protected override Task ScheduleTaskExecutionAsync(
+        Guid taskId,
         CopilotTaskSubscriber subscriber,
         string message,
         CancellationToken cancellationToken)
     {
-        bool entered = false;
+        Task predecessor;
+        TaskCompletionSource executionCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task execution;
 
+        lock (_executionSyncRoot)
+        {
+            predecessor = _executionQueueTail;
+            execution = Task.Run(() => ExecuteQueuedTaskAsync(predecessor, executionCompleted, taskId, subscriber, message, cancellationToken));
+            _executionQueueTail = executionCompleted.Task;
+        }
+
+        return execution;
+    }
+
+    private async Task ExecuteQueuedTaskAsync(
+        Task predecessor,
+        TaskCompletionSource executionCompleted,
+        Guid taskId,
+        CopilotTaskSubscriber subscriber,
+        string message,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            await _executionGate.WaitAsync(cancellationToken);
-            entered = true;
-
-            await RunPromptAsync(session, subscriber, message, cancellationToken);
+            await predecessor.WaitAsync(cancellationToken);
+            await ExecuteTaskAsync(taskId, subscriber, message, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            subscriber.Cancel();
+            Publisher.PublishTaskStatusChanged(new TaskStatusChangedEvent(taskId, TaskStatus.Cancelled, DateTime.UtcNow));
         }
         finally
         {
-            if (entered)
-            {
-                _executionGate.Release();
-            }
+            executionCompleted.TrySetResult();
         }
     }
+
+    protected override Task ExecuteCoreAsync(
+        CopilotTaskSubscriber subscriber,
+        string message,
+        CancellationToken cancellationToken)
+        => RunPromptAsync(session, subscriber, message, cancellationToken);
 
     public override async ValueTask DisposeAsync()
     {
@@ -55,7 +84,6 @@ internal sealed class SharedCopilotSessionTaskAgent(ICopilotSessionConnection se
         }
         finally
         {
-            _executionGate.Dispose();
             _disposeCancellationSource.Dispose();
             await base.DisposeAsync();
         }

@@ -84,7 +84,7 @@ Abstractions  ← AIAgent  ← GitHubCopilot
 ### Thread Safety
 
 - `TaskSubscriberBase` 子类（`ChatClientAgentTaskSubscriber`, `CopilotTaskSubscriber`）用 `lock(_syncRoot)` 保护内部状态。
-- `SharedCopilotSessionTaskAgent` 使用 `SemaphoreSlim(1, 1)` 串行化共享 session 上的任务执行。
+- `SharedCopilotSessionTaskAgent` 通过 FIFO 异步队列串行化共享 session 上的任务执行，避免并发调用打乱会话顺序。
 - Agent 基类的 `_tasks` / `_subscribers` 使用 `ConcurrentDictionary`。
 
 ### Extension Methods
