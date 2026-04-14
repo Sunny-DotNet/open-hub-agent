@@ -1,6 +1,6 @@
 # OpenHub.Agents
 
-[ English ](README.md) | [ **简体中文** ](README.zh-CN.md) | [ 日本語 ](README.ja-JP.md) | [ 한국어 ](README.ko-KR.md)
+[ English ](README.md) | [ **简体中文** ](README.zh-CN.md) | [ 日本語 ](README.ja-JP.md) | [ Français ](README.fr-FR.md)
 
 ---
 
