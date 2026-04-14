@@ -52,13 +52,21 @@ jobs:
           -p:SymbolPackageFormat=snupkg
           -o artifacts
 
+      - name: Validate NuGet Trusted Publishing configuration
+        shell: pwsh
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:NUGET_USER))
+          {
+            throw "Repository variable NUGET_USER must be set to the NuGet.org profile name that owns the Trusted Publisher policy."
+          }
+
       - name: NuGet login (OIDC -> temp API key)
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          # Set repository variable NUGET_USER if the NuGet.org profile name
-          # differs from the GitHub repository owner name.
-          user: ${{ vars.NUGET_USER || github.repository_owner }}
+          user: ${{ vars.NUGET_USER }}
 
       - name: Publish packages
         shell: pwsh
