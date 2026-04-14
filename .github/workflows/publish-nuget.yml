@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  packages: write
 
 jobs:
   publish:
@@ -70,4 +71,28 @@ jobs:
             Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
             ForEach-Object {
               dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source $env:NUGET_SOURCE_URL --skip-duplicate
+            }
+
+      - name: Configure GitHub Packages source
+        shell: pwsh
+        env:
+          GITHUB_PACKAGES_SOURCE_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+          GITHUB_PACKAGES_USERNAME: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget add source $env:GITHUB_PACKAGES_SOURCE_URL `
+            --name github `
+            --username $env:GITHUB_PACKAGES_USERNAME `
+            --password $env:GITHUB_TOKEN `
+            --store-password-in-clear-text
+
+      - name: Publish packages to GitHub Packages
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Get-ChildItem -Path artifacts -Filter *.nupkg |
+            Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
+            ForEach-Object {
+              dotnet nuget push $_.FullName --api-key $env:GITHUB_TOKEN --source github --skip-duplicate
             }

@@ -9,6 +9,8 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 	  <RootNamespace>OpenHub</RootNamespace>
+    <RepositoryUrl>https://github.com/Sunny-DotNet/open-hub-agent</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
