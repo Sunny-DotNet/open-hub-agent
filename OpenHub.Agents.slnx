@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/OpenHub.Agents.Sample.Console/OpenHub.Agents.Sample.Console.csproj" />
+  </Folder>
+  <Folder Name="/solutions/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OpenHub.Agents.Abstractions/OpenHub.Agents.Abstractions.csproj" />
+    <Project Path="src/OpenHub.Agents.AIAgent/OpenHub.Agents.AIAgent.csproj" />
+    <Project Path="src/OpenHub.Agents.GitHubCopilot/OpenHub.Agents.GitHubCopilot.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenHub.Agents.Tests/OpenHub.Agents.Tests.csproj" />
+  </Folder>
+</Solution>

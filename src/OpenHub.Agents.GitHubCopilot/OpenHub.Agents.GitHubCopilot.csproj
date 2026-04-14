@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <AssemblyName>OpenHub.Agents.GitHubCopilot</AssemblyName>
+    <Description>GitHub Copilot adapters for OpenHub.Agents with shared-session and per-task session modes.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitHub.Copilot.SDK" />
+    <PackageReference Include="Microsoft.Agents.AI.GitHub.Copilot" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenHub.Agents.Abstractions\OpenHub.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\OpenHub.Agents.AIAgent\OpenHub.Agents.AIAgent.csproj" />
+  </ItemGroup>
+</Project>

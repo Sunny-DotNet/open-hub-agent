@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  	  <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net9.0;net10.0</TargetFrameworks>
+    <AssemblyName>OpenHub.Agents.Abstractions</AssemblyName>
+    <Description>Task-agent contracts and streaming event models for OpenHub.Agents.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+	  <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+	  <PackageReference Include="Microsoft.Agents.AI.Abstractions" />
+	  <PackageReference Include="System.Reactive" />
+  </ItemGroup>
+</Project>

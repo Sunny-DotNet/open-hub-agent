@@ -1,0 +1,71 @@
+name: publish-nuget
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve package version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = if ($tag.StartsWith("v", [System.StringComparison]::OrdinalIgnoreCase)) { $tag.Substring(1) } else { $tag }
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Unable to derive package version from tag '$tag'."
+          }
+
+          "package_version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Restore
+        run: dotnet restore OpenHub.Agents.slnx
+
+      - name: Build
+        run: dotnet build OpenHub.Agents.slnx --configuration Release --no-restore
+
+      - name: Pack
+        run: >
+          dotnet pack OpenHub.Agents.slnx
+          --configuration Release
+          --no-build
+          -p:ContinuousIntegrationBuild=true
+          -p:Version=${{ steps.version.outputs.package_version }}
+          -p:IncludeSymbols=true
+          -p:SymbolPackageFormat=snupkg
+          -o artifacts
+
+      - name: Publish packages
+        shell: pwsh
+        env:
+          NUGET_SOURCE_URL: https://api.nuget.org/v3/index.json
+        run: |
+          # NuGet Trusted Publishing uses the GitHub Actions OIDC token, so no
+          # long-lived API key is required here.
+          Get-ChildItem -Path artifacts -Filter *.nupkg |
+            Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
+            ForEach-Object {
+              dotnet nuget push $_.FullName --source $env:NUGET_SOURCE_URL --skip-duplicate
+            }
+
+          Get-ChildItem -Path artifacts -Filter *.snupkg |
+            ForEach-Object {
+              dotnet nuget push $_.FullName --source $env:NUGET_SOURCE_URL --skip-duplicate
+            }
