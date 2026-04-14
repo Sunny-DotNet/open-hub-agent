@@ -48,8 +48,6 @@ jobs:
           --no-build
           -p:ContinuousIntegrationBuild=true
           -p:Version=${{ steps.version.outputs.package_version }}
-          -p:IncludeSymbols=true
-          -p:SymbolPackageFormat=snupkg
           -o artifacts
 
       - name: NuGet login (OIDC -> temp API key)
@@ -66,14 +64,10 @@ jobs:
           NUGET_SOURCE_URL: https://api.nuget.org/v3/index.json
         run: |
           # NuGet Trusted Publishing exchanges the GitHub Actions OIDC token for
-          # a short-lived API key via NuGet/login.
+          # a short-lived API key via NuGet/login. This repo uses embedded PDBs,
+          # so the release workflow publishes .nupkg packages only.
           Get-ChildItem -Path artifacts -Filter *.nupkg |
             Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
-            ForEach-Object {
-              dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source $env:NUGET_SOURCE_URL --skip-duplicate
-            }
-
-          Get-ChildItem -Path artifacts -Filter *.snupkg |
             ForEach-Object {
               dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source $env:NUGET_SOURCE_URL --skip-duplicate
             }
