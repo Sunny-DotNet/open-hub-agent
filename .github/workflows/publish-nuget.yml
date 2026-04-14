@@ -52,20 +52,29 @@ jobs:
           -p:SymbolPackageFormat=snupkg
           -o artifacts
 
+      - name: NuGet login (OIDC -> temp API key)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          # Set repository variable NUGET_USER if the NuGet.org profile name
+          # differs from the GitHub repository owner name.
+          user: ${{ vars.NUGET_USER || github.repository_owner }}
+
       - name: Publish packages
         shell: pwsh
         env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           NUGET_SOURCE_URL: https://api.nuget.org/v3/index.json
         run: |
-          # NuGet Trusted Publishing uses the GitHub Actions OIDC token, so no
-          # long-lived API key is required here.
+          # NuGet Trusted Publishing exchanges the GitHub Actions OIDC token for
+          # a short-lived API key via NuGet/login.
           Get-ChildItem -Path artifacts -Filter *.nupkg |
             Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
             ForEach-Object {
-              dotnet nuget push $_.FullName --source $env:NUGET_SOURCE_URL --skip-duplicate
+              dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source $env:NUGET_SOURCE_URL --skip-duplicate
             }
 
           Get-ChildItem -Path artifacts -Filter *.snupkg |
             ForEach-Object {
-              dotnet nuget push $_.FullName --source $env:NUGET_SOURCE_URL --skip-duplicate
+              dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source $env:NUGET_SOURCE_URL --skip-duplicate
             }
