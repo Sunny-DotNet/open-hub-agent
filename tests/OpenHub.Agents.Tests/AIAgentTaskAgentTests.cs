@@ -27,6 +27,56 @@ public sealed class AIAgentTaskAgentTests
     }
 
     [Fact]
+    public async Task CreateTaskAsync_RejectsInvalidHistoryMessages()
+    {
+        FakeAIAgent backend = new((_, _) => AIAgentTestStreams.ReturnUpdates([]));
+        await using ITaskAgent taskAgent = backend.AsTaskAgent();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => taskAgent.CreateTaskAsync(new CreateTaskRequest("prompt"), null!));
+        await Assert.ThrowsAsync<ArgumentException>(() => taskAgent.CreateTaskAsync(
+            new CreateTaskRequest("prompt"),
+            [new TaskHistoryMessage(ChatRole.User, " ")]));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => taskAgent.CreateTaskAsync(
+            new CreateTaskRequest("prompt"),
+            [new TaskHistoryMessage(ChatRole.System, "hello")]));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_WithHistory_PassesOrderedChatMessages()
+    {
+        FakeAIAgent backend = new((_, _) => AIAgentTestStreams.ReturnUpdates([]));
+        await using ITaskAgent taskAgent = backend.AsTaskAgent();
+
+        CreateTaskResponse response = await taskAgent.CreateTaskAsync(
+            new CreateTaskRequest("Can you turn that into a checklist?"),
+            [
+                new TaskHistoryMessage(ChatRole.User, "Summarize this repo."),
+                new TaskHistoryMessage(ChatRole.Assistant, "It is a .NET task-agent adapter library."),
+            ]);
+
+        await response.Subscriber.WaitForCompletionAsync().WaitAsync(WaitTimeout);
+
+        IReadOnlyList<ChatMessage> messages = Assert.Single(backend.MessageBatches);
+        Assert.Collection(
+            messages,
+            message =>
+            {
+                Assert.Equal(ChatRole.User, message.Role);
+                Assert.Equal("Summarize this repo.", message.Text);
+            },
+            message =>
+            {
+                Assert.Equal(ChatRole.Assistant, message.Role);
+                Assert.Equal("It is a .NET task-agent adapter library.", message.Text);
+            },
+            message =>
+            {
+                Assert.Equal(ChatRole.User, message.Role);
+                Assert.Equal("Can you turn that into a checklist?", message.Text);
+            });
+    }
+
+    [Fact]
     public async Task AsTaskAgent_PublishesLifecycleAndMappedEvents()
     {
         FakeAIAgent backend = new((_, _) => AIAgentTestStreams.ReturnUpdates(

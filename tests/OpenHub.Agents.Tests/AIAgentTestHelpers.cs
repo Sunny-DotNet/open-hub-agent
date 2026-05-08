@@ -63,7 +63,10 @@ internal static class AIAgentTestStreams
 internal sealed class FakeAIAgent(
     Func<IReadOnlyList<ChatMessage>, CancellationToken, IAsyncEnumerable<AgentResponseUpdate>> runStreamingAsync) : AIAgent, IAsyncDisposable
 {
+    private readonly ConcurrentQueue<IReadOnlyList<ChatMessage>> _messageBatches = [];
     private readonly ConcurrentQueue<string?> _prompts = [];
+
+    public IReadOnlyList<IReadOnlyList<ChatMessage>> MessageBatches => [.. _messageBatches];
 
     public IReadOnlyList<string?> Prompts => [.. _prompts];
 
@@ -98,6 +101,7 @@ internal sealed class FakeAIAgent(
         CancellationToken cancellationToken)
     {
         ChatMessage[] bufferedMessages = [.. messages];
+        _messageBatches.Enqueue(bufferedMessages);
         foreach (ChatMessage message in bufferedMessages)
         {
             _prompts.Enqueue(message.Text);

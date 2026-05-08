@@ -1,8 +1,11 @@
-using GitHub.Copilot.SDK;
-using OpenHub.Agents.Models;
 using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using GitHub.Copilot.SDK;
+using Microsoft.Extensions.AI;
+using OpenHub.Agents.Models;
 using TaskStatus = OpenHub.Agents.Models.TaskStatus;
 
 namespace OpenHub.Agents;
@@ -11,22 +14,22 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
 {
     public override Task<CreateTaskResponse> CreateTaskAsync(
         CreateTaskRequest request,
+        IReadOnlyList<TaskHistoryMessage> history,
         CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (string.IsNullOrWhiteSpace(request.Message))
-        {
-            throw new ArgumentException("A task message is required.", nameof(request));
-        }
+        string message = ValidateTaskMessage(request);
+        TaskHistoryMessage[] validatedHistory = ValidateTaskHistory(history);
+        string prompt = BuildCopilotPrompt(message, validatedHistory);
 
         Guid taskId = Guid.NewGuid();
         CopilotTaskSubscriber subscriber = new(taskId);
         _taskSubscribers[taskId] = subscriber;
         Publisher.PublishTaskStatusChanged(new TaskStatusChangedEvent(taskId, TaskStatus.Pending, DateTime.UtcNow));
 
-        Task execution = ScheduleTaskExecutionAsync(taskId, subscriber, request.Message, _disposeCancellationSource.Token);
+        Task execution = ScheduleTaskExecutionAsync(taskId, subscriber, prompt, _disposeCancellationSource.Token);
         _taskExecutions[taskId] = execution;
         _ = execution.ContinueWith(
             _ => CleanupTask(taskId),
@@ -114,6 +117,54 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
         await session.SendAsync(new MessageOptions { Prompt = message }, cancellationToken);
         await completionSource.Task.WaitAsync(cancellationToken);
     }
+
+    private static string BuildCopilotPrompt(string message, IReadOnlyList<TaskHistoryMessage> history)
+    {
+        if (history.Count == 0)
+        {
+            return message;
+        }
+
+        List<SerializedHistoryMessage> serializedHistory = new(history.Count);
+        foreach (TaskHistoryMessage historyMessage in history)
+        {
+            serializedHistory.Add(new SerializedHistoryMessage(MapHistoryRole(historyMessage.Role), historyMessage.Content));
+        }
+
+        string historyJson = JsonSerializer.Serialize(serializedHistory, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        return $$"""
+            Continue the conversation using the JSON transcript below as prior context.
+            Each history item is in chronological order and has a "role" of "user" or "assistant".
+            Respond only to the current user message.
+
+            Conversation history JSON:
+            {{historyJson}}
+
+            Current user message:
+            {{message}}
+            """;
+    }
+
+
+    private static string MapHistoryRole(ChatRole role)
+    {
+        if (role == ChatRole.User)
+        {
+            return "user";
+        }
+
+        if (role == ChatRole.Assistant)
+        {
+            return "assistant";
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(role));
+    }
+
+    private readonly record struct SerializedHistoryMessage(string Role, string Content);
 
     protected static async ValueTask DisposeOwnedResourceAsync(object? resource)
     {
