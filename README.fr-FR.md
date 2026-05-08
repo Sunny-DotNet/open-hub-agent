@@ -113,6 +113,19 @@ GitHub Copilot peut etre utilise de deux manieres :
 - `CopilotSession.AsTaskAgent(...)` : reutiliser une session et conserver l'etat de conversation
 - `CopilotClient.AsTaskAgent(...)` : creer une nouvelle session pour chaque tache
 
+### Initialiser une tache avec l'historique
+
+```csharp
+CreateTaskResponse response = await taskAgent.CreateTaskAsync(
+    new("Can you turn that into a checklist?"),
+    [
+        new TaskHistoryMessage(TaskHistoryMessageRole.User, "Summarize this repo."),
+        new TaskHistoryMessage(TaskHistoryMessageRole.Assistant, "It is a .NET task-agent adapter library.")
+    ]);
+```
+
+Pour les adaptateurs GitHub Copilot, l'historique explicite est serialize en prompt structure, car le SDK actuel ne permet pas d'injecter directement les tours assistant dans une nouvelle session.
+
 ## Notes
 
 - `OpenHub.Agents.GitHubCopilot` depend actuellement du package en preversion `Microsoft.Agents.AI.GitHub.Copilot`.

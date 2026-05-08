@@ -1,8 +1,9 @@
-using OpenHub.Agents.Models;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.AI;
+using OpenHub.Agents.Models;
 using TaskStatus = OpenHub.Agents.Models.TaskStatus;
 
 namespace OpenHub.Agents.Tests;
@@ -21,6 +22,36 @@ public sealed class CopilotTaskAgentTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => agent.CreateTaskAsync(new CreateTaskRequest(" ")));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => agent.CreateTaskAsync(new CreateTaskRequest("prompt"), cancellationTokenSource.Token));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_WithHistory_SerializesTranscriptIntoPrompt()
+    {
+        FakeCopilotSessionConnection session = new((self, _, _) =>
+        {
+            self.Publish(GitHubCopilotTestEvents.CreateIdleEvent());
+            return Task.CompletedTask;
+        });
+
+        await using SharedCopilotSessionTaskAgent agent = new(session, ownsSession: false);
+
+        CreateTaskResponse response = await agent.CreateTaskAsync(
+            new CreateTaskRequest("Can you turn that into a checklist?"),
+            [
+                new TaskHistoryMessage(ChatRole.User, "Summarize this repo."),
+                new TaskHistoryMessage(ChatRole.Assistant, "It is a .NET task-agent adapter library."),
+            ]);
+
+        await response.Subscriber.WaitForCompletionAsync().WaitAsync(WaitTimeout);
+
+        string prompt = Assert.Single(session.SentPrompts)!;
+        Assert.StartsWith("Continue the conversation using the JSON transcript below as prior context.", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"role\":\"user\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"content\":\"Summarize this repo.\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"role\":\"assistant\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"content\":\"It is a .NET task-agent adapter library.\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("Current user message:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Can you turn that into a checklist?", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -55,7 +55,7 @@ internal static class GitHubCopilotTestEvents
             {
                 ToolCallId = toolCallId,
                 Success = true,
-                Result = new ToolExecutionCompleteDataResult
+                Result = new ToolExecutionCompleteResult
                 {
                     Content = content,
                 },

@@ -113,6 +113,19 @@ GitHub Copilot 支持两种用法：
 - `CopilotSession.AsTaskAgent(...)`：复用同一个 session，并保留会话状态
 - `CopilotClient.AsTaskAgent(...)`：每个任务创建一个全新 session
 
+### 传入历史对话创建任务
+
+```csharp
+CreateTaskResponse response = await taskAgent.CreateTaskAsync(
+    new("Can you turn that into a checklist?"),
+    [
+        new TaskHistoryMessage(TaskHistoryMessageRole.User, "Summarize this repo."),
+        new TaskHistoryMessage(TaskHistoryMessageRole.Assistant, "It is a .NET task-agent adapter library.")
+    ]);
+```
+
+对于 GitHub Copilot 适配器，显式传入的历史记录会被序列化为结构化 prompt，因为当前 SDK 还不能把 assistant 历史消息直接注入到一个全新的 session 中。
+
 ## 备注
 
 - `OpenHub.Agents.GitHubCopilot` 当前依赖预览版包 `Microsoft.Agents.AI.GitHub.Copilot`。

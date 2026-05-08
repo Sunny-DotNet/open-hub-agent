@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI;
 using System;
 
 namespace OpenHub.Agents.Models;
@@ -21,4 +21,6 @@ public record struct TaskToolCallResponseEvent(Guid TaskId, string ToolCallId, s
 public record struct TaskMediaCreatedEvent(Guid TaskId, int MediaId, string MediaUrl, string MediaType);
 public record struct TaskUsageUpdatedEvent(Guid TaskId, UsageContent UsageContent);
 public record struct CreateTaskRequest(string Message);
+
+public record struct TaskHistoryMessage(ChatRole Role, string Content);
 public record struct CreateTaskResponse(Guid TaskId, ITaskSubscriber Subscriber);
