@@ -36,9 +36,9 @@ public sealed class AIAgentTaskAgentTests
         await Assert.ThrowsAsync<ArgumentException>(() => taskAgent.CreateTaskAsync(
             new CreateTaskRequest("prompt"),
             [new TaskHistoryMessage(ChatRole.User, " ")]));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => taskAgent.CreateTaskAsync(
+        await Assert.ThrowsAsync<ArgumentException>(() => taskAgent.CreateTaskAsync(
             new CreateTaskRequest("prompt"),
-            [new TaskHistoryMessage(ChatRole.System, "hello")]));
+            [new TaskHistoryMessage(default, "hello")]));
     }
 
     [Fact]
@@ -73,6 +73,41 @@ public sealed class AIAgentTaskAgentTests
             {
                 Assert.Equal(ChatRole.User, message.Role);
                 Assert.Equal("Can you turn that into a checklist?", message.Text);
+            });
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_WithNonUserAssistantRoles_PassesThemThrough()
+    {
+        FakeAIAgent backend = new((_, _) => AIAgentTestStreams.ReturnUpdates([]));
+        await using ITaskAgent taskAgent = backend.AsTaskAgent();
+
+        CreateTaskResponse response = await taskAgent.CreateTaskAsync(
+            new CreateTaskRequest("Continue."),
+            [
+                new TaskHistoryMessage(ChatRole.System, "You are concise."),
+                new TaskHistoryMessage(ChatRole.Tool, "Fetched file list."),
+            ]);
+
+        await response.Subscriber.WaitForCompletionAsync().WaitAsync(WaitTimeout);
+
+        IReadOnlyList<ChatMessage> messages = Assert.Single(backend.MessageBatches);
+        Assert.Collection(
+            messages,
+            message =>
+            {
+                Assert.Equal(ChatRole.System, message.Role);
+                Assert.Equal("You are concise.", message.Text);
+            },
+            message =>
+            {
+                Assert.Equal(ChatRole.Tool, message.Role);
+                Assert.Equal("Fetched file list.", message.Text);
+            },
+            message =>
+            {
+                Assert.Equal(ChatRole.User, message.Role);
+                Assert.Equal("Continue.", message.Text);
             });
     }
 

@@ -55,6 +55,33 @@ public sealed class CopilotTaskAgentTests
     }
 
     [Fact]
+    public async Task CreateTaskAsync_WithArbitraryRoles_PreservesRoleStringsInPrompt()
+    {
+        FakeCopilotSessionConnection session = new((self, _, _) =>
+        {
+            self.Publish(GitHubCopilotTestEvents.CreateIdleEvent());
+            return Task.CompletedTask;
+        });
+
+        await using SharedCopilotSessionTaskAgent agent = new(session, ownsSession: false);
+
+        CreateTaskResponse response = await agent.CreateTaskAsync(
+            new CreateTaskRequest("Continue."),
+            [
+                new TaskHistoryMessage(ChatRole.System, "You are concise."),
+                new TaskHistoryMessage(ChatRole.Tool, "Fetched file list."),
+            ]);
+
+        await response.Subscriber.WaitForCompletionAsync().WaitAsync(WaitTimeout);
+
+        string prompt = Assert.Single(session.SentPrompts)!;
+        Assert.Contains("\"role\":\"system\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"content\":\"You are concise.\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"role\":\"tool\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"content\":\"Fetched file list.\"", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SharedCopilotSessionTaskAgent_PublishesLifecycleAndMappedTaskEvents()
     {
         FakeCopilotSessionConnection session = new((self, _, _) =>

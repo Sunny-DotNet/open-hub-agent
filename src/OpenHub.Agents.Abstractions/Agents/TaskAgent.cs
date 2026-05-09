@@ -89,9 +89,9 @@ public abstract class TaskAgentBase : ITaskAgent
                 throw new ArgumentException($"History message at index {i} requires content.", nameof(history));
             }
 
-            if (historyMessage.Role != ChatRole.User && historyMessage.Role != ChatRole.Assistant)
+            if (string.IsNullOrWhiteSpace(historyMessage.Role.Value))
             {
-                throw new ArgumentOutOfRangeException(nameof(history), $"History message at index {i} uses unsupported role '{historyMessage.Role}'.");
+                throw new ArgumentException($"History message at index {i} requires a role.", nameof(history));
             }
 
         }

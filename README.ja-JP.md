@@ -119,12 +119,12 @@ GitHub Copilot には 2 つの使い方があります。
 CreateTaskResponse response = await taskAgent.CreateTaskAsync(
     new("Can you turn that into a checklist?"),
     [
-        new TaskHistoryMessage(TaskHistoryMessageRole.User, "Summarize this repo."),
-        new TaskHistoryMessage(TaskHistoryMessageRole.Assistant, "It is a .NET task-agent adapter library.")
+        new TaskHistoryMessage(ChatRole.User, "Summarize this repo."),
+        new TaskHistoryMessage(ChatRole.Assistant, "It is a .NET task-agent adapter library.")
     ]);
 ```
 
-GitHub Copilot アダプターでは、現在の SDK で assistant の履歴ターンを新しい session に直接注入できないため、明示的な履歴は構造化 prompt として直列化されます。
+GitHub Copilot アダプターでは、現在の SDK で任意ロールの履歴ターンを新しい session に直接注入できないため、明示的な履歴は構造化 prompt として直列化されます。その際、元のロール文字列は保持されます。
 
 ## メモ
 

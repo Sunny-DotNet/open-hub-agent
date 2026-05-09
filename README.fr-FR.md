@@ -119,12 +119,12 @@ GitHub Copilot peut etre utilise de deux manieres :
 CreateTaskResponse response = await taskAgent.CreateTaskAsync(
     new("Can you turn that into a checklist?"),
     [
-        new TaskHistoryMessage(TaskHistoryMessageRole.User, "Summarize this repo."),
-        new TaskHistoryMessage(TaskHistoryMessageRole.Assistant, "It is a .NET task-agent adapter library.")
+        new TaskHistoryMessage(ChatRole.User, "Summarize this repo."),
+        new TaskHistoryMessage(ChatRole.Assistant, "It is a .NET task-agent adapter library.")
     ]);
 ```
 
-Pour les adaptateurs GitHub Copilot, l'historique explicite est serialize en prompt structure, car le SDK actuel ne permet pas d'injecter directement les tours assistant dans une nouvelle session.
+Pour les adaptateurs GitHub Copilot, l'historique explicite est serialize en prompt structure, car le SDK actuel ne permet pas d'injecter directement des tours arbitraires dans une nouvelle session. Les roles d'origine sont conserves dans ce prompt.
 
 ## Notes
 

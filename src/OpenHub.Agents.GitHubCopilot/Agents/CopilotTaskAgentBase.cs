@@ -128,7 +128,7 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
         List<SerializedHistoryMessage> serializedHistory = new(history.Count);
         foreach (TaskHistoryMessage historyMessage in history)
         {
-            serializedHistory.Add(new SerializedHistoryMessage(MapHistoryRole(historyMessage.Role), historyMessage.Content));
+            serializedHistory.Add(new SerializedHistoryMessage(historyMessage.Role.Value, historyMessage.Content));
         }
 
         string historyJson = JsonSerializer.Serialize(serializedHistory, new JsonSerializerOptions
@@ -137,7 +137,7 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
         });
         return $$"""
             Continue the conversation using the JSON transcript below as prior context.
-            Each history item is in chronological order and has a "role" of "user" or "assistant".
+            Each history item is in chronological order and preserves its original role string.
             Respond only to the current user message.
 
             Conversation history JSON:
@@ -148,21 +148,6 @@ internal abstract class CopilotTaskAgentBase : TaskAgentBase
             """;
     }
 
-
-    private static string MapHistoryRole(ChatRole role)
-    {
-        if (role == ChatRole.User)
-        {
-            return "user";
-        }
-
-        if (role == ChatRole.Assistant)
-        {
-            return "assistant";
-        }
-
-        throw new ArgumentOutOfRangeException(nameof(role));
-    }
 
     private readonly record struct SerializedHistoryMessage(string Role, string Content);
 
